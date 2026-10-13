@@ -6,9 +6,12 @@ export function Chat({ target, starters, onActivity }: { target: ChatTarget; sta
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const end = useRef<HTMLDivElement>(null);
+  const log = useRef<HTMLDivElement>(null);
 
-  useEffect(() => end.current?.scrollIntoView({ block: "nearest" }), [messages, busy]);
+  // Scroll the chat itself (not the page) to the newest message.
+  useEffect(() => {
+    if (log.current) log.current.scrollTop = log.current.scrollHeight;
+  }, [messages, busy]);
 
   const send = async (text: string) => {
     const msg = text.trim();
@@ -30,7 +33,7 @@ export function Chat({ target, starters, onActivity }: { target: ChatTarget; sta
 
   return (
     <div className="chat">
-      <div className="chat-log">
+      <div className="chat-log" ref={log}>
         {messages.length === 0 && (
           <div className="starters">
             {starters.map((s) => (
@@ -42,7 +45,6 @@ export function Chat({ target, starters, onActivity }: { target: ChatTarget; sta
           <div key={i} className={`bubble ${m.role}`}>{m.text}</div>
         ))}
         {busy && <div className="bubble assistant typing">Thinking…</div>}
-        <div ref={end} />
       </div>
       <form
         className="chat-input"

@@ -1,5 +1,5 @@
 import type { Finding, Household } from "../../shared/types";
-import { daysBetween, money } from "../../shared/format";
+import { daysBetween, money, roundStep } from "../../shared/format";
 
 export interface CashPlan {
   monthlySpending: number;
@@ -16,14 +16,15 @@ export function cashPlan(h: Household, today: string, bufferMonths = 2): CashPla
   const out = h.transactions.filter((t) => t.amount < 0 && t.category !== "transfer");
   const months = Math.max(1, daysBetween(h.transactions[0].date, today) / 30.4);
   const monthlySpending = Math.round(out.reduce((n, t) => n - t.amount, 0) / months);
-  const buffer = Math.ceil((monthlySpending * bufferMonths) / 1000) * 1000;
+  const step = roundStep(monthlySpending);
+  const buffer = Math.ceil((monthlySpending * bufferMonths) / step) * step;
   const best = h.offers.filter((o) => o.kind === "savings" && o.rate).sort((a, b) => b.rate! - a.rate!)[0];
   const bestRate = best?.rate ?? 0;
 
   const moves: CashPlan["moves"] = [];
   for (const a of h.accounts) {
     if (a.interestRate >= bestRate) continue;
-    const amount = a.kind === "current" ? Math.floor((a.balance - buffer) / 1000) * 1000 : a.balance;
+    const amount = a.kind === "current" ? Math.floor((a.balance - buffer) / step) * step : a.balance;
     if (amount <= 0) continue;
     moves.push({
       fromAccountId: a.id,

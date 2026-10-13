@@ -3,9 +3,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { createApp } from "./app";
+import { AppState } from "./state";
 import { hasClaude, MODEL } from "./agents/runtime";
 
-const app = createApp();
+const state = new AppState();
+const app = createApp(state);
+// Optional starting currency, e.g. DEFAULT_CURRENCY=EUR. Fetches live rates.
+if (process.env.DEFAULT_CURRENCY) {
+  state.setCurrency(process.env.DEFAULT_CURRENCY).catch((e) => console.warn(`DEFAULT_CURRENCY ignored: ${e.message}`));
+}
 
 if (process.env.NODE_ENV === "production") {
   const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist");

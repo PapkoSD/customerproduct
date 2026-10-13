@@ -7,6 +7,7 @@ import { Chat } from "./components/Chat";
 import { FindingCard } from "./components/FindingCard";
 import { Inbox } from "./components/Inbox";
 import { ScamCheck } from "./components/ScamCheck";
+import { CurrencyPicker, savedCurrency } from "./components/CurrencyPicker";
 
 type View = { page: "home" } | { page: "inbox" } | { page: "agent"; id: AgentId };
 
@@ -19,6 +20,15 @@ export function App() {
 
   /** Anything that changes findings or the inbox calls this to refresh the whole app. */
   const refresh = useCallback(() => setVersion((v) => v + 1), []);
+
+  // Restore the currency the user picked last time (the server forgets on restart).
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    if (restored || !overview) return;
+    setRestored(true);
+    const saved = savedCurrency();
+    if (saved && saved !== overview.profile.currency) api.setCurrency(saved).then(refresh).catch(() => {});
+  }, [overview, restored, refresh]);
 
   useEffect(() => {
     Promise.all([api.overview(), api.findings()])
@@ -53,6 +63,7 @@ export function App() {
           <span className={`badge ${overview.mode}`} title={overview.mode === "claude" ? "Agents run on Claude" : "No API key: rule-based answers"}>
             {overview.mode === "claude" ? "AI on" : "Offline mode"} · sample data
           </span>
+          <CurrencyPicker current={cur} pendingDrafts={overview.totals.pendingActions} onChanged={refresh} />
           <button className={`navbtn ${view.page === "inbox" ? "active" : ""}`} onClick={() => go({ page: "inbox" })}>
             Approvals {overview.totals.pendingActions > 0 && <span className="count">{overview.totals.pendingActions}</span>}
           </button>
@@ -121,7 +132,12 @@ export function App() {
           </div>
 
           <footer className="foot">
-            Prototype with made-up data. No real bank, provider, email or call is ever contacted.{" "}
+            Prototype with made-up data. No real bank, provider, email or call is ever contacted.
+            {overview.fx.base !== cur && (
+              <>
+                {" "}Amounts converted from {overview.fx.base} at 1 {overview.fx.base} = {overview.fx.rate.toPrecision(4)} {cur} ({overview.fx.live ? "live" : "offline"} rates: {overview.fx.source}, {overview.fx.asOf}).
+              </>
+            )}{" "}
             <button className="link" onClick={() => api.reset().then(refresh)}>Reset demo</button>
           </footer>
         </main>

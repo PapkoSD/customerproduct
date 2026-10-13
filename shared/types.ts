@@ -1,6 +1,7 @@
 // Types shared by the API server and the web app.
 
-export type Currency = "CZK" | "EUR" | "USD" | "GBP";
+/** ISO 4217 code, e.g. "CZK", "EUR", "USD". */
+export type Currency = string;
 
 export interface Account {
   id: string;
@@ -118,7 +119,20 @@ export interface Profile {
   knownPayees: { name: string; iban: string }[];
 }
 
+/** How the household's money was converted from the sample data's base currency. */
+export interface FxInfo {
+  base: Currency;
+  /** Units of the display currency per 1 unit of base. */
+  rate: number;
+  /** Units of the display currency per 1 EUR (for EU rules set in euros). */
+  perEur: number;
+  source: string;
+  asOf: string;
+  live: boolean;
+}
+
 export interface Household {
+  fx: FxInfo;
   profile: Profile;
   accounts: Account[];
   transactions: Transaction[];
@@ -226,4 +240,5 @@ export interface Overview {
   agents: (AgentInfo & { findingCount: number; yearlyImpact: number; oneOffImpact: number })[];
   totals: { yearly: number; oneOff: number; findings: number; pendingActions: number };
   mode: "claude" | "offline";
+  fx: FxInfo;
 }

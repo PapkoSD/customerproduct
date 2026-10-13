@@ -73,7 +73,7 @@ export function templateDraft(f: Finding, h: Household, today: string): DraftInp
     case "file_claim": {
       const trip = h.trips.find((t) => f.evidence.includes(t.id));
       if (trip) {
-        const eur = Math.round((f.oneOffImpact ?? 0) / 25);
+        const eur = Math.round((f.oneOffImpact ?? 0) / h.fx.perEur);
         return {
           ...base,
           title: `Claim €${eur} from ${trip.airline}`,

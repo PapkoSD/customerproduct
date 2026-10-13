@@ -2,7 +2,12 @@
 // Swap this module for a real data source (open banking, CSV import, email
 // parsing) without touching the detectors or agents: they only see `Household`.
 
-import type { Household, Transaction } from "../../shared/types";
+import type { Currency, FxInfo, Household, Transaction } from "../../shared/types";
+import { currencyDecimals } from "../../shared/format";
+import { FALLBACK_RATES, rate, type RateTable } from "../fx";
+
+/** The sample data is written in this currency and converted for display. */
+export const BASE_CURRENCY = "CZK";
 
 /** Fixed "today" so the demo and the tests are deterministic. */
 export const TODAY = "2026-10-13";
@@ -89,8 +94,38 @@ function buildTransactions(): Transaction[] {
   return out.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
 }
 
-export function createHousehold(): Household {
+/** The sample household in any currency, converted with the given rates. */
+export function createHousehold(currency: Currency = BASE_CURRENCY, rates: RateTable = FALLBACK_RATES): Household {
+  const fx: FxInfo = {
+    base: BASE_CURRENCY,
+    rate: rate(rates, BASE_CURRENCY, currency),
+    perEur: rate(rates, "EUR", currency),
+    source: rates.source,
+    asOf: rates.asOf,
+    live: rates.live,
+  };
+  return convert(baseHousehold(fx), currency, fx.rate);
+}
+
+function convert(h: Household, currency: Currency, r: number): Household {
+  if (currency === BASE_CURRENCY) return h;
+  const d = 10 ** currencyDecimals(currency);
+  const m = (x: number) => Math.round(x * r * d) / d;
   return {
+    ...h,
+    profile: { ...h.profile, currency, annualIncomeEstimate: m(h.profile.annualIncomeEstimate), taxAdvancesPaid: m(h.profile.taxAdvancesPaid) },
+    accounts: h.accounts.map((a) => ({ ...a, balance: m(a.balance), monthlyFee: m(a.monthlyFee) })),
+    transactions: h.transactions.map((t) => ({ ...t, amount: m(t.amount) })),
+    contracts: h.contracts.map((c) => ({ ...c, monthlyCost: m(c.monthlyCost) })),
+    offers: h.offers.map((o) => ({ ...o, monthlyCost: m(o.monthlyCost) })),
+    purchases: h.purchases.map((p) => ({ ...p, price: m(p.price) })),
+    invoices: h.invoices.map((i) => ({ ...i, amount: m(i.amount) })),
+  };
+}
+
+function baseHousehold(fx: FxInfo): Household {
+  return {
+    fx,
     profile: {
       name: "Alex",
       country: "CZ",
@@ -123,7 +158,7 @@ export function createHousehold(): Household {
     ],
     contracts: [
       { id: "ct-mobile", provider: "Volna Mobile", kind: "mobile", monthlyCost: 690, startedOn: "2023-03-01", details: "20 GB, unlimited calls, no commitment", contact: { email: "care@volna.example", phone: "+420 800 100 100", chat: "volna.example/chat" } },
-      { id: "ct-internet", provider: "FiberNet", kind: "internet", monthlyCost: 599, startedOn: "2026-02-01", promoEndsOn: "2026-07-31", details: "500 Mb/s fibre, promo 299 for 6 months", contact: { email: "support@fibernet.example", phone: "+420 800 200 200" } },
+      { id: "ct-internet", provider: "FiberNet", kind: "internet", monthlyCost: 599, startedOn: "2026-02-01", promoEndsOn: "2026-07-31", details: "500 Mb/s fibre, 6-month promo price", contact: { email: "support@fibernet.example", phone: "+420 800 200 200" } },
       { id: "ct-energy", provider: "ProudCo Energie", kind: "energy", monthlyCost: 2450, startedOn: "2024-01-01", details: "Electricity + gas, variable tariff, 3.1 MWh/yr", contact: { email: "zakaznici@proudco.example", phone: "+420 800 300 300" } },
       { id: "ct-insurance", provider: "Jistota Insurance", kind: "insurance", monthlyCost: 1150, startedOn: "2022-11-01", details: "Car liability + comprehensive, Škoda Octavia 2019, renews 1 Nov", contact: { email: "claims@jistota.example", phone: "+420 800 400 400" } },
     ],

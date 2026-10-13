@@ -16,7 +16,9 @@ Penny is a friendly web app where a small team of AI agents looks after your mon
 
 Plus **Ask Penny**, a coordinator chat that can use every agent's tools.
 
-> ⚠️ Prototype. It runs on made-up sample data for one Czech freelancer (CZK). No bank, provider, email, phone call or payment is ever contacted: approving an action only simulates it. Tax and legal rules are simplified estimates.
+**Any currency:** pick one in the top bar. Every amount, finding and draft is converted at live exchange rates from free sources that need no API key ([ExchangeRate-API open access](https://www.exchangerate-api.com/docs/free), with [ECB rates via Frankfurter](https://frankfurter.dev) as backup), cached for 6 hours. Without internet the app uses a bundled rate snapshot and says so in the footer. Rules set in a fixed currency stay correct: EU flight compensation is always €250/€400/€600, and the Czech tax credits are converted from CZK.
+
+> ⚠️ Prototype. It runs on made-up sample data for one Czech freelancer, written in CZK. No bank, provider, email, phone call or payment is ever contacted: approving an action only simulates it. Tax and legal rules are simplified estimates.
 
 ## Run it
 

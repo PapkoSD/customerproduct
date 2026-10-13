@@ -2,8 +2,9 @@
 // approval queue. Replace with a database when there are real users.
 
 import { randomUUID } from "node:crypto";
-import type { AgentId, Finding, Household, ProposedAction } from "../shared/types";
+import type { AgentId, Currency, Finding, Household, ProposedAction } from "../shared/types";
 import { createHousehold, TODAY } from "./data/mock";
+import { FALLBACK_RATES, getRates, type RateTable } from "./fx";
 import { detectAll } from "./engine";
 import type { DraftInput } from "./engine/drafts";
 
@@ -14,9 +15,34 @@ export class AppState {
   /** Findings closed by an approved action; they drop off the dashboard. */
   private resolved = new Set<string>();
 
-  constructor(household = createHousehold(), today = TODAY) {
+  constructor(household = createHousehold(), today = TODAY, private rates: RateTable = FALLBACK_RATES) {
     this.household = household;
     this.today = today;
+  }
+
+  get currency(): Currency {
+    return this.household.profile.currency;
+  }
+
+  /**
+   * Show everything in another currency, converted at the latest rates.
+   * Drafts are cleared because their text quotes the old amounts.
+   */
+  async setCurrency(code: string, fetchImpl?: typeof fetch): Promise<void> {
+    const currency = code.trim().toUpperCase();
+    const rates = await getRates(fetchImpl);
+    if (!/^[A-Z]{3}$/.test(currency) || !rates.rates[currency]) throw new HttpError(400, `Unsupported currency ${code}`);
+    this.rates = rates;
+    this.household = createHousehold(currency, rates);
+    this.actions.clear();
+    this.resolved.clear();
+  }
+
+  /** Start over with fresh sample data in the current currency. */
+  reset(): void {
+    this.household = createHousehold(this.currency, this.rates);
+    this.actions.clear();
+    this.resolved.clear();
   }
 
   findings(agent?: AgentId): Finding[] {

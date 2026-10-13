@@ -31,4 +31,6 @@ export const api = {
   scamCheck: (text: string, from: string) =>
     post<{ verdict: "safe" | "suspicious" | "scam"; score: number; reasons: string[]; advice: string }>("/scam/check", { text, from }),
   reset: () => post<{ ok: true }>("/reset"),
+  currencies: () => call<{ current: string; codes: string[]; source: string; asOf: string; live: boolean }>("/currencies"),
+  setCurrency: (currency: string) => post<{ ok: true }>("/settings/currency", { currency }),
 };

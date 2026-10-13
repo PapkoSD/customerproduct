@@ -3,6 +3,7 @@ import type { AgentId, ChatMessage, ChatTarget, Overview } from "../shared/types
 import { AGENTS, getAgent } from "./agents/registry";
 import { draftForFinding, hasClaude, runAgent } from "./agents/runtime";
 import { assessMessage } from "./engine/scam";
+import { getRates } from "./fx";
 import { AppState, HttpError } from "./state";
 
 export function createApp(state = new AppState()) {
@@ -43,6 +44,7 @@ export function createApp(state = new AppState()) {
         pendingActions: state.listActions().filter((a) => a.status === "pending").length,
       },
       mode: hasClaude() ? "claude" : "offline",
+      fx: state.household.fx,
     };
     res.json(body);
   });
@@ -97,9 +99,19 @@ export function createApp(state = new AppState()) {
   });
   app.post("/api/actions/:id/reject", (req, res) => res.json(state.reject(req.params.id)));
 
+  app.get("/api/currencies", async (_req, res) => {
+    const rates = await getRates();
+    res.json({ current: state.currency, codes: Object.keys(rates.rates).sort(), source: rates.source, asOf: rates.asOf, live: rates.live });
+  });
+
+  app.post("/api/settings/currency", async (req, res) => {
+    const code = typeof req.body?.currency === "string" ? req.body.currency : "";
+    await state.setCurrency(code);
+    res.json({ ok: true, fx: state.household.fx });
+  });
+
   app.post("/api/reset", (_req, res) => {
-    const fresh = new AppState();
-    Object.assign(state, fresh);
+    state.reset();
     res.json({ ok: true });
   });
 

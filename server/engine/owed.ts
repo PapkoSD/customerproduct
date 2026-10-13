@@ -2,9 +2,6 @@ import type { Finding, Household } from "../../shared/types";
 import { addDays, daysBetween, money } from "../../shared/format";
 import { taxSummary } from "./taxes";
 
-/** Fixed demo rate; a real build would fetch it. */
-export const EUR_RATE: Record<string, number> = { CZK: 25, EUR: 1, USD: 1.08, GBP: 0.85 };
-
 /** EU Regulation 261/2004 compensation for a delay of 3h+ at arrival or a cancellation. */
 export function eu261Compensation(distanceKm: number, delayMinutes: number, cancelled: boolean): number {
   if (!cancelled && delayMinutes < 180) return 0;
@@ -15,7 +12,7 @@ export function eu261Compensation(distanceKm: number, delayMinutes: number, canc
 
 export function detectOwed(h: Household, today: string): Finding[] {
   const cur = h.profile.currency;
-  const rate = EUR_RATE[cur] ?? 1;
+  const rate = h.fx.perEur;
   const findings: Finding[] = [];
 
   for (const trip of h.trips) {
@@ -25,7 +22,7 @@ export function detectOwed(h: Household, today: string): Finding[] {
       id: `owed-flight-${trip.id}`,
       agent: "owed",
       title: `${trip.airline} owes you €${eur} for flight ${trip.flight}`,
-      detail: `${trip.from} → ${trip.to} on ${trip.date} arrived ${Math.round(trip.delayMinutes / 6) / 10} h late. Under EU rule 261/2004 that's €${eur} (≈ ${money(eur * rate, cur)}) per passenger, unless the airline proves extraordinary circumstances.`,
+      detail: `${trip.from} → ${trip.to} on ${trip.date} arrived ${Math.round(trip.delayMinutes / 6) / 10} h late. Under EU rule 261/2004 that's €${eur} ${cur === "EUR" ? "" : ` (≈ ${money(eur * rate, cur)})`} per passenger, unless the airline proves extraordinary circumstances.`,
       severity: "save",
       oneOffImpact: eur * rate,
       evidence: [trip.id],

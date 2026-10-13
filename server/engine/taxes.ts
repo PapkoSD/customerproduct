@@ -5,6 +5,7 @@
 import type { Finding, Household } from "../../shared/types";
 import { daysBetween, money } from "../../shared/format";
 
+/** Amounts in CZK; converted to the display currency when used. */
 export const CZ_RULES = {
   flatExpenseRate: 0.6, // "výdajový paušál" for most trades
   incomeTaxRate: 0.15,
@@ -29,12 +30,14 @@ export interface TaxSummary {
 
 export function taxSummary(h: Household, today: string): TaxSummary {
   const p = h.profile;
+  // Czech credits are set in CZK: express them in the display currency.
+  const czk = h.fx.base === "CZK" ? h.fx.rate : 1;
   const income = p.annualIncomeEstimate;
   const expensesFlatRate = Math.round(income * CZ_RULES.flatExpenseRate);
   const taxBase = income - expensesFlatRate;
   const taxBeforeCredits = Math.round(taxBase * CZ_RULES.incomeTaxRate);
-  const credits = [{ label: "Basic taxpayer credit", amount: CZ_RULES.basicTaxpayerCredit }];
-  if (p.childrenCount > 0) credits.push({ label: "Child tax credit (1st child)", amount: CZ_RULES.firstChildCredit });
+  const credits = [{ label: "Basic taxpayer credit", amount: Math.round(CZ_RULES.basicTaxpayerCredit * czk) }];
+  if (p.childrenCount > 0) credits.push({ label: "Child tax credit (1st child)", amount: Math.round(CZ_RULES.firstChildCredit * czk) });
   const estimatedTax = Math.max(0, taxBeforeCredits - credits.reduce((n, c) => n + c.amount, 0));
   const year = Number(today.slice(0, 4));
   const deadlines = [
